@@ -1,2 +1,1 @@
-# issues
-Issue tracker for GhostBSD
+# GhostBSD Issues Tracker
