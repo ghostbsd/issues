@@ -1,6 +1,6 @@
 name: Security issue
 description: Report a security issue or vulnerability here.
-title: "[Security] <title>"
+#title: ""
 labels: [security]
 body:
   - type: markdown
