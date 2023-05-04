@@ -1,6 +1,6 @@
 name: Feature Request
 description: Request a new feature, enhancement to improve GhostBSD
-title: "[Feature] <title>"
+#title: ""
 labels: [feature]
 body:
   - type: markdown
