@@ -22,7 +22,7 @@ body:
     attributes:
       label: Version
       description: Use ghostbsd-version -v or go to App menu > System Tools > Mate System Monitor and on the System Monitor window click System Tab
-      placeholder: "22.03.11"
+      placeholder: "24.01.1"
     validations:
       required: true
   - type: dropdown
