@@ -1,5 +1,5 @@
-name: Enhancement and Feature Request
-description: Request a new feature, an enhancement to improve GhostBSD
+name: Enhancement or Feature Request
+description: Request a new feature or an enhancement to improve GhostBSD.
 #title: ""
 labels: [enhancement]
 body:
@@ -28,6 +28,6 @@ body:
     id: why
     attributes:
       label: Why this request?
-      Description: Why is this feature or enhancement requested?
+      description: Why is this feature or enhancement requested?
     validations:
       required: true
