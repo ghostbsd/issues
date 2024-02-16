@@ -1,13 +1,13 @@
-name: Feature Request
-description: Request a new feature, enhancement to improve GhostBSD
+name: Enhancement and Feature Request
+description: Request a new feature, an enhancement to improve GhostBSD
 #title: ""
-labels: [feature]
+labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
         ### Please read this first
-        Before requesting an a new feature, enhancement, make sure it is not in our [Development Management](https://github.com/orgs/ghostbsd/projects/4/views/12).
+        Before requesting a new feature or enhancement, please ensure it is not in our [Development Management](https://github.com/orgs/ghostbsd/projects/4/views/12).
 
         Follow these tips to help us understand your request.
         * Only one feature or enhancement per request
@@ -20,7 +20,7 @@ body:
   - type: textarea
     id: describe
     attributes:
-      label: Describe the feature or enhancement
+      label: Describe the feature or enhancement.
       description: A clear and concise description of the feature or enhancement.
     validations:
       required: true
@@ -28,6 +28,6 @@ body:
     id: why
     attributes:
       label: Why this request?
-      description: Why this feature or enhancement request.
+      Description: Why is this feature or enhancement requested?
     validations:
       required: true
