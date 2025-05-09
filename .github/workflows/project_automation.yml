@@ -38,6 +38,8 @@ jobs:
           project_id: 4
           resource_node_id: ${{ github.event.issue.node_id }}
           status_value: ${{ env.new }}
+        env:
+          DEBUG: true  # Enable debug logging for project-beta-automations
 
   issue_assigned:
     name: issue_assigned
@@ -52,6 +54,8 @@ jobs:
           project_id: 4
           resource_node_id: ${{ github.event.issue.node_id }}
           status_value: ${{ env.in_progress }}
+        env:
+          DEBUG: true
 
   pr_opened:
     name: pr_opened
@@ -66,6 +70,8 @@ jobs:
           project_id: 4
           resource_node_id: ${{ github.event.pull_request.node_id }}
           status_value: ${{ env.in_review }}
+        env:
+          DEBUG: true
 
   issue_or_pr_closed:
     name: issue_or_pr_closed
@@ -103,6 +109,7 @@ jobs:
               });
 
               const closeReason = issue.state_reason || 'none';
+              console.log(`Close Reason: ${closeReason}`);
               let statusValue = '';
               let labelToAdd = '';
               let shouldArchive = false;
@@ -119,6 +126,7 @@ jobs:
 
               // Set outputs for status update if applicable
               if (statusValue) {
+                console.log(`Setting status_value: ${statusValue}`);
                 core.setOutput('status_value', statusValue);
                 core.setOutput('node_id', nodeId);
               }
@@ -132,6 +140,7 @@ jobs:
                     issue_number: issueNumber,
                     labels: [labelToAdd],
                   });
+                  console.log(`Added label: ${labelToAdd}`);
                 } catch (error) {
                   console.log(`Failed to add label ${labelToAdd}: ${error.message}`);
                 }
@@ -183,6 +192,7 @@ jobs:
                     projectNumber: 4
                   });
 
+                  console.log(`Project items fetched: ${projectItems.organization.projectV2.items.nodes.length} items`);
                   const projectItem = projectItems.organization.projectV2.items.nodes.find(
                     item => item.content.id === nodeId
                   );
@@ -224,3 +234,5 @@ jobs:
           project_id: 4
           resource_node_id: ${{ steps.close-reason.outputs.node_id }}
           status_value: ${{ steps.close-reason.outputs.status_value }}
+        env:
+          DEBUG: true  # Enable debug logging for project-beta-automations
