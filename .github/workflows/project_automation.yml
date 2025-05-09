@@ -4,9 +4,11 @@ on:
     types:
       - opened
       - assigned
+      - closed
   pull_request:
     types:
       - opened
+      - closed
 
 # map fields with customized labels
 env:
@@ -16,46 +18,174 @@ env:
   in_progress: In Progress
   in_review: In Review
 
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+  projects: write
+
 jobs:
   issue_opened:
     name: issue_opened
     runs-on: ubuntu-latest
-    if: github.event_name == 'issues' && (github.event.action == 'opened')
+    if: github.event_name == 'issues' && github.event.action == 'opened'
     steps:
       - name: Move issue to ${{ env.new }}
         uses: leonsteinhaeuser/project-beta-automations@v2.1.0
         with:
           gh_token: ${{ secrets.MY_GITHUB_TOKEN }}
-          # user: ghostbsd
           organization: ghostbsd
           project_id: 4
           resource_node_id: ${{ github.event.issue.node_id }}
           status_value: ${{ env.new }}
+
   issue_assigned:
     name: issue_assigned
     runs-on: ubuntu-latest
-    if: github.event_name == 'issues' && (github.event.action == 'assigned')
+    if: github.event_name == 'issues' && github.event.action == 'assigned'
     steps:
       - name: Move issue to ${{ env.in_progress }}
         uses: leonsteinhaeuser/project-beta-automations@v2.1.0
         with:
           gh_token: ${{ secrets.MY_GITHUB_TOKEN }}
-          # user: ghostbsd
           organization: ghostbsd
           project_id: 4
           resource_node_id: ${{ github.event.issue.node_id }}
           status_value: ${{ env.in_progress }}
+
   pr_opened:
     name: pr_opened
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && (github.event.action == 'opened')
+    if: github.event_name == 'pull_request' && github.event.action == 'opened'
     steps:
       - name: Move PR to ${{ env.in_review }}
         uses: leonsteinhaeuser/project-beta-automations@v2.1.0
         with:
           gh_token: ${{ secrets.MY_GITHUB_TOKEN }}
-          # user: ghostbsd
           organization: ghostbsd
           project_id: 4
           resource_node_id: ${{ github.event.pull_request.node_id }}
           status_value: ${{ env.in_review }}
+
+  issue_or_pr_closed:
+    name: issue_or_pr_closed
+    runs-on: ubuntu-latest
+    if: (github.event_name == 'issues' || github.event_name == 'pull_request') && github.event.action == 'closed'
+    steps:
+      - name: Check Close Reason and Update
+        id: close-reason
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.MY_GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.payload.number;
+            const repo = context.repo;
+            const isIssue = context.eventName === 'issues';
+            const nodeId = isIssue ? context.payload.issue.node_id : context.payload.pull_request.node_id;
+
+            // Get issue/PR details
+            const { data: issue } = await github.rest.issues.get({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: issueNumber,
+            });
+
+            const closeReason = issue.state_reason || 'none';
+            let statusValue = '';
+            let labelToAdd = '';
+            let shouldArchive = false;
+
+            if (closeReason === 'not_planned') {
+              labelToAdd = 'wontfix';
+              shouldArchive = true;
+            } else if (closeReason === 'duplicate') {
+              labelToAdd = 'duplicate';
+              shouldArchive = true;
+            } else if (closeReason === 'completed') {
+              statusValue = process.env.done;
+            }
+
+            // Set outputs for status update if applicable
+            if (statusValue) {
+              core.setOutput('status_value', statusValue);
+              core.setOutput('node_id', nodeId);
+            }
+
+            // Add label if applicable
+            if (labelToAdd) {
+              try {
+                await github.rest.issues.addLabels({
+                  owner: repo.owner,
+                  repo: repo.repo,
+                  issue_number: issueNumber,
+                  labels: [labelToAdd],
+                });
+              } catch (error) {
+                console.log(`Failed to add label ${labelToAdd}: ${error.message}`);
+              }
+            }
+
+            // Archive the project item if needed (not supported by project-beta-automations)
+            if (shouldArchive) {
+              try {
+                const projectItems = await github.graphql(`
+                  query($org: String!, $projectNumber: Int!) {
+                    organization(login: $org) {
+                      projectV2(number: $projectNumber) {
+                        items(first: 100) {
+                          nodes {
+                            id
+                            content {
+                              ... on Issue {
+                                id
+                              }
+                              ... on PullRequest {
+                                id
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                `, {
+                  org: 'ghostbsd',
+                  projectNumber: 4
+                });
+
+                const projectItem = projectItems.organization.projectV2.items.nodes.find(
+                  item => item.content.id === nodeId
+                );
+
+                if (projectItem) {
+                  await github.graphql(`
+                    mutation($itemId: ID!) {
+                      archiveProjectV2Item(input: { projectId: "${process.env.PROJECT_ID}", itemId: $itemId }) {
+                        item {
+                          id
+                        }
+                      }
+                    }
+                  `, {
+                    itemId: projectItem.id
+                  });
+                  console.log(`Archived item with node ID ${nodeId} in project 4`);
+                } else {
+                  console.log(`Item with node ID ${nodeId} not found in project 4`);
+                }
+              } catch (error) {
+                console.log(`Failed to archive item: ${error.message}`);
+              }
+            }
+
+            core.setOutput('close_reason', closeReason);
+
+      - name: Move to Project Board
+        if: steps.close-reason.outputs.status_value
+        uses: leonsteinhaeuser/project-beta-automations@v2.1.0
+        with:
+          gh_token: ${{ secrets.MY_GITHUB_TOKEN }}
+          organization: ghostbsd
+          project_id: 4
+          resource_node_id: ${{ steps.close-reason.outputs.node_id }}
+          status_value: ${{ steps.close-reason.outputs.status_value }}
