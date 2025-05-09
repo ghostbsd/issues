@@ -112,14 +112,14 @@ jobs:
               console.log(`Close Reason: ${closeReason}`);
               let statusValue = '';
               let labelToAdd = '';
-              let shouldArchive = false;
+              let shouldRemove = false;
 
               if (closeReason === 'not_planned') {
                 labelToAdd = 'wontfix';
-                shouldArchive = true;
+                shouldRemove = true;
               } else if (closeReason === 'duplicate') {
                 labelToAdd = 'duplicate';
-                shouldArchive = true;
+                shouldRemove = true;
               } else if (closeReason === 'completed') {
                 statusValue = process.env.done;
               }
@@ -146,100 +146,78 @@ jobs:
                 }
               }
 
-              // Handle project actions (add to project, update status, or archive)
-              try {
-                // Fetch project node ID
-                const projectData = await github.graphql(`
-                  query($org: String!, $projectNumber: Int!) {
-                    organization(login: $org) {
-                      projectV2(number: $projectNumber) {
-                        id
+              // Remove the project item if needed
+              if (shouldRemove) {
+                try {
+                  // Fetch project node ID
+                  const projectData = await github.graphql(`
+                    query($org: String!, $projectNumber: Int!) {
+                      organization(login: $org) {
+                        projectV2(number: $projectNumber) {
+                          id
+                        }
                       }
                     }
-                  }
-                `, {
-                  org: 'ghostbsd',
-                  projectNumber: 4
-                });
+                  `, {
+                    org: 'ghostbsd',
+                    projectNumber: 4
+                  });
 
-                const projectId = projectData.organization.projectV2.id;
-                console.log(`Project ID: ${projectId}`);
+                  const projectId = projectData.organization.projectV2.id;
+                  console.log(`Project ID: ${projectId}`);
 
-                // Fetch project items
-                const projectItems = await github.graphql(`
-                  query($org: String!, $projectNumber: Int!) {
-                    organization(login: $org) {
-                      projectV2(number: $projectNumber) {
-                        items(first: 1000) {
-                          nodes {
-                            id
-                            content {
-                              ... on Issue {
-                                id
-                              }
-                              ... on PullRequest {
-                                id
+                  // Fetch project items
+                  const projectItems = await github.graphql(`
+                    query($org: String!, $projectNumber: Int!) {
+                      organization(login: $org) {
+                        projectV2(number: $projectNumber) {
+                          items(first: 100) {
+                            nodes {
+                              id
+                              content {
+                                ... on Issue {
+                                  id
+                                }
+                                ... on PullRequest {
+                                  id
+                                }
                               }
                             }
                           }
                         }
                       }
                     }
-                  }
-                `, {
-                  org: 'ghostbsd',
-                  projectNumber: 4
-                });
-
-                console.log(`Project items fetched: ${projectItems.organization.projectV2.items.nodes.length} items`);
-                let projectItem = projectItems.organization.projectV2.items.nodes.find(
-                  item => item.content.id === nodeId
-                );
-
-                // If item is not in project, add it
-                if (!projectItem) {
-                  console.log(`Item with node ID ${nodeId} not found in project 4, adding it`);
-                  const addItem = await github.graphql(`
-                    mutation($projectId: ID!, $contentId: ID!) {
-                      addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
-                        item {
-                          id
-                        }
-                      }
-                    }
                   `, {
-                    projectId: projectId,
-                    contentId: nodeId
+                    org: 'ghostbsd',
+                    projectNumber: 4
                   });
-                  console.log(`Added item with node ID ${nodeId} to project 4, item ID: ${addItem.addProjectV2ItemById.item.id}`);
-                  projectItem = { id: addItem.addProjectV2ItemById.item.id };
-                }
 
-                // Archive the project item if needed
-                if (shouldArchive) {
-                  try {
+                  console.log(`Project items fetched: ${projectItems.organization.projectV2.items.nodes.length} items`);
+                  const projectItem = projectItems.organization.projectV2.items.nodes.find(
+                    item => item.content.id === nodeId
+                  );
+
+                  if (projectItem) {
                     await github.graphql(`
                       mutation($projectId: ID!, $itemId: ID!) {
-                        archiveProjectV2Item(input: { projectId: $projectId, itemId: $itemId }) {
-                          item {
-                            id
-                          }
+                        deleteProjectV2Item(input: { projectId: $projectId, itemId: $itemId }) {
+                          deletedItemId
                         }
                       }
                     `, {
                       projectId: projectId,
                       itemId: projectItem.id
                     });
-                    console.log(`Archived item with node ID ${nodeId} in project 4`);
-                  } catch (error) {
-                    console.log(`Failed to archive item: ${error.message}`);
+                    console.log(`Removed item with node ID ${nodeId} from project 4`);
+                  } else {
+                    console.log(`Item with node ID ${nodeId} not found in project 4`);
                   }
+                } catch (error) {
+                  console.log(`Failed to remove item: ${error.message}`);
                 }
-
-                core.setOutput('close_reason', closeReason);
-              } catch (error) {
-                console.log(`Failed to manage project item: ${error.message}`);
               }
+
+              core.setOutput('close_reason', closeReason);
             } catch (error) {
               console.log(`Failed to fetch issue/PR: ${error.message}`);
               throw error;
