@@ -39,7 +39,7 @@ jobs:
           resource_node_id: ${{ github.event.issue.node_id }}
           status_value: ${{ env.new }}
         env:
-          DEBUG: true  # Enable debug logging for project-beta-automations
+          DEBUG: true
 
   issue_assigned:
     name: issue_assigned
@@ -146,58 +146,78 @@ jobs:
                 }
               }
 
-              // Archive the project item if needed (not supported by project-beta-automations)
-              if (shouldArchive) {
-                try {
-                  // Fetch project node ID
-                  const projectData = await github.graphql(`
-                    query($org: String!, $projectNumber: Int!) {
-                      organization(login: $org) {
-                        projectV2(number: $projectNumber) {
-                          id
-                        }
+              // Handle project actions (add to project, update status, or archive)
+              try {
+                // Fetch project node ID
+                const projectData = await github.graphql(`
+                  query($org: String!, $projectNumber: Int!) {
+                    organization(login: $org) {
+                      projectV2(number: $projectNumber) {
+                        id
                       }
                     }
-                  `, {
-                    org: 'ghostbsd',
-                    projectNumber: 4
-                  });
+                  }
+                `, {
+                  org: 'ghostbsd',
+                  projectNumber: 4
+                });
 
-                  const projectId = projectData.organization.projectV2.id;
-                  console.log(`Project ID: ${projectId}`);
+                const projectId = projectData.organization.projectV2.id;
+                console.log(`Project ID: ${projectId}`);
 
-                  // Fetch project items
-                  const projectItems = await github.graphql(`
-                    query($org: String!, $projectNumber: Int!) {
-                      organization(login: $org) {
-                        projectV2(number: $projectNumber) {
-                          items(first: 100) {
-                            nodes {
-                              id
-                              content {
-                                ... on Issue {
-                                  id
-                                }
-                                ... on PullRequest {
-                                  id
-                                }
+                // Fetch project items
+                const projectItems = await github.graphql(`
+                  query($org: String!, $projectNumber: Int!) {
+                    organization(login: $org) {
+                      projectV2(number: $projectNumber) {
+                        items(first: 1000) {
+                          nodes {
+                            id
+                            content {
+                              ... on Issue {
+                                id
+                              }
+                              ... on PullRequest {
+                                id
                               }
                             }
                           }
                         }
                       }
                     }
+                  }
+                `, {
+                  org: 'ghostbsd',
+                  projectNumber: 4
+                });
+
+                console.log(`Project items fetched: ${projectItems.organization.projectV2.items.nodes.length} items`);
+                let projectItem = projectItems.organization.projectV2.items.nodes.find(
+                  item => item.content.id === nodeId
+                );
+
+                // If item is not in project, add it
+                if (!projectItem) {
+                  console.log(`Item with node ID ${nodeId} not found in project 4, adding it`);
+                  const addItem = await github.graphql(`
+                    mutation($projectId: ID!, $contentId: ID!) {
+                      addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                        item {
+                          id
+                        }
+                      }
+                    }
                   `, {
-                    org: 'ghostbsd',
-                    projectNumber: 4
+                    projectId: projectId,
+                    contentId: nodeId
                   });
+                  console.log(`Added item with node ID ${nodeId} to project 4, item ID: ${addItem.addProjectV2ItemById.item.id}`);
+                  projectItem = { id: addItem.addProjectV2ItemById.item.id };
+                }
 
-                  console.log(`Project items fetched: ${projectItems.organization.projectV2.items.nodes.length} items`);
-                  const projectItem = projectItems.organization.projectV2.items.nodes.find(
-                    item => item.content.id === nodeId
-                  );
-
-                  if (projectItem) {
+                // Archive the project item if needed
+                if (shouldArchive) {
+                  try {
                     await github.graphql(`
                       mutation($projectId: ID!, $itemId: ID!) {
                         archiveProjectV2Item(input: { projectId: $projectId, itemId: $itemId }) {
@@ -211,15 +231,15 @@ jobs:
                       itemId: projectItem.id
                     });
                     console.log(`Archived item with node ID ${nodeId} in project 4`);
-                  } else {
-                    console.log(`Item with node ID ${nodeId} not found in project 4`);
+                  } catch (error) {
+                    console.log(`Failed to archive item: ${error.message}`);
                   }
-                } catch (error) {
-                  console.log(`Failed to archive item: ${error.message}`);
                 }
-              }
 
-              core.setOutput('close_reason', closeReason);
+                core.setOutput('close_reason', closeReason);
+              } catch (error) {
+                console.log(`Failed to manage project item: ${error.message}`);
+              }
             } catch (error) {
               console.log(`Failed to fetch issue/PR: ${error.message}`);
               throw error;
@@ -235,4 +255,4 @@ jobs:
           resource_node_id: ${{ steps.close-reason.outputs.node_id }}
           status_value: ${{ steps.close-reason.outputs.status_value }}
         env:
-          DEBUG: true  # Enable debug logging for project-beta-automations
+          DEBUG: true
