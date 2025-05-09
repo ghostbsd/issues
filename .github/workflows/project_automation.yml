@@ -197,8 +197,6 @@ jobs:
                         }
                       }
                     `, {
-                     ស
-
                       projectId: projectId,
                       itemId: projectItem.id
                     });
