@@ -78,9 +78,9 @@ jobs:
         with:
           github-token: ${{ secrets.MY_GITHUB_TOKEN }}
           script: |
-            const issueNumber = context.payload.number;
-            const repo = context.repo;
             const isIssue = context.eventName === 'issues';
+            const issueNumber = isIssue ? context.payload.issue.number : context.payload.pull_request.number;
+            const repo = context.repo;
             const nodeId = isIssue ? context.payload.issue.node_id : context.payload.pull_request.node_id;
 
             // Log context for debugging
@@ -90,7 +90,8 @@ jobs:
 
             // Validate inputs
             if (!issueNumber || !repo.owner || !repo.repo) {
-              throw new Error('Missing required context: issueNumber, repo.owner, or repo.repo');
+              console.log(`Context payload: ${JSON.stringify(context.payload, null, 2)}`);
+              throw new Error(`Missing required context: issueNumber=${issueNumber}, repo.owner=${repo.owner}, repo.repo=${repo.repo}`);
             }
 
             // Get issue/PR details
@@ -196,6 +197,8 @@ jobs:
                         }
                       }
                     `, {
+                     ស
+
                       projectId: projectId,
                       itemId: projectItem.id
                     });
