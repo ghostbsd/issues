@@ -67,10 +67,10 @@ jobs:
           resource_node_id: ${{ github.event.pull_request.node_id }}
           status_value: ${{ env.in_review }}
 
-  issue_or_pr_closed:
-    name: issue_or_pr_closed
+  issue_closed:
+    name: issue_closed
     runs-on: ubuntu-latest
-    if: (github.event_name == 'issues' || github.event_name == 'pull_request') && github.event.action == 'closed'
+    if: github.event_name == 'issues' && github.event.action == 'closed'
     steps:
       - name: Check Close Reason and Update
         id: close-reason
