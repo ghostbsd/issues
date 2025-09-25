@@ -1,13 +1,13 @@
 name: Security issue
 description: Report a security issue or vulnerability here.
 #title: ""
-labels: [security]
+type: Security
 body:
   - type: markdown
     attributes:
       value: |
         ### Please read this first
-        Before reporting a security issue or vulnerability, make sure it is not in our [Development Management](https://github.com/orgs/ghostbsd/projects/4/views/12).
+        Before reporting a security issue or vulnerability, make sure it is not in our [Development Management Known Issues](https://github.com/orgs/ghostbsd/projects/4/views/21).
 
         Follow these tips to help us understand your security issue
         * Only one security issue or vulnerability per report
@@ -22,7 +22,7 @@ body:
     attributes:
       label: Version
       description: Use ghostbsd-version -v or go to App menu > System Tools > Mate System Monitor and on the System Monitor window click System Tab
-      placeholder: "22.03.11"
+      placeholder: "25.02-R14.3p2"
     validations:
       required: true
   - type: textarea

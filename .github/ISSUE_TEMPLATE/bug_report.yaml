@@ -1,13 +1,13 @@
 name: Bug Report
 description: Report a bug or issue here.
 #title: ""
-labels: [bug]
+type: Bug
 body:
   - type: markdown
     attributes:
       value: |
         ### Please read this first
-        Before reporting an issue, please make sure it is not in our [Development Management](https://github.com/orgs/ghostbsd/projects/4/views/12).
+        Before reporting an issue, please make sure it is not in our [Development Management Known Issues](https://github.com/orgs/ghostbsd/projects/4/views/21).
 
         Follow these tips to help us understand your issue.
         * Only one issue per report
@@ -22,16 +22,17 @@ body:
     attributes:
       label: Version
       description: Use ghostbsd-version -v or go to App menu > System Tools > Mate System Monitor and on the System Monitor window click System Tab
-      placeholder: "24.01.1"
+      placeholder: "25.02-R14.3p2"
     validations:
       required: true
   - type: dropdown
-    id: 
+    id: desktop
     attributes:
       label: What desktop?
       options:
         - Official MATE
         - Community XFCE
+        - Community Gershwin
         - Other
     validations:
       required: true
