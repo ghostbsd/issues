@@ -12,8 +12,8 @@ on:
 
 # map fields with customized labels
 env:
-  new: New
-  todo: Todo
+  to_triage: To Triage
+  ready: Ready
   done: Done
   in_progress: In Progress
   in_review: In Review
@@ -30,14 +30,14 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'issues' && github.event.action == 'opened'
     steps:
-      - name: Move issue to ${{ env.new }}
+      - name: Move issue to ${{ env.to_triage }}
         uses: leonsteinhaeuser/project-beta-automations@v2.1.0
         with:
           gh_token: ${{ secrets.MY_GITHUB_TOKEN }}
           organization: ghostbsd
           project_id: 4
           resource_node_id: ${{ github.event.issue.node_id }}
-          status_value: ${{ env.new }}
+          status_value: ${{ env.to_triage }}
         env:
           DEBUG: true
 
