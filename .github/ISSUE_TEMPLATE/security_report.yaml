@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         ### Please read this first
-        Before reporting a security issue or vulnerability, make sure it is not in our [Development Management Known Issues](https://github.com/orgs/ghostbsd/projects/4/views/21).
+        Before reporting a security issue or vulnerability, make sure it is not in our [Development Management Known Issues](https://github.com/orgs/ghostbsd/projects/4/views/26).
 
         Follow these tips to help us understand your security issue
         * Only one security issue or vulnerability per report
